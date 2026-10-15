@@ -270,7 +270,7 @@ public class UserResource {
                     Status.BAD_REQUEST);
         } catch (ModelIllegalStateException e) {
             logger.error(e.getMessage(), e);
-            throw ErrorResponse.error(e.getMessage(), Response.Status.INTERNAL_SERVER_ERROR);
+            throw ErrorResponse.error("For more on this error consult the server log.", Response.Status.INTERNAL_SERVER_ERROR);
         } catch (ModelException me) {
             logger.warn("Could not update user!", me);
             session.getTransactionManager().setRollbackOnly();
