@@ -21,6 +21,7 @@ import org.keycloak.services.DefaultKeycloakSessionFactory;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -51,6 +52,12 @@ class KeycloakErrorHandlerTest {
         try (KeycloakSession session = createSession()) {
             Response response = KeycloakErrorHandler.getResponse(session,
                     new JsonParseException((JsonParser) null, "Unexpected token"));
+            assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+            assertEquals("Cannot parse the JSON",
+                    ((OAuth2ErrorRepresentation) response.getEntity()).getErrorDescription());
+
+            response = KeycloakErrorHandler.getResponse(session,
+                    MismatchedInputException.from((JsonParser) null, String.class, "Expected string"));
             assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
             assertEquals("Cannot parse the JSON",
                     ((OAuth2ErrorRepresentation) response.getEntity()).getErrorDescription());

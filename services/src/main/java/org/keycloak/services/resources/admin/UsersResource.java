@@ -26,7 +26,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.naming.NamingException;
 
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.Consumes;
@@ -53,6 +52,7 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.ModelDuplicateException;
 import org.keycloak.models.ModelException;
 import org.keycloak.models.ModelIllegalStateException;
+import org.keycloak.models.ModelValidationException;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.UserSessionModel;
@@ -196,19 +196,10 @@ public class UsersResource {
             throw ErrorResponse.error(e.getMessage(), Response.Status.INTERNAL_SERVER_ERROR);
         } catch (ModelException me){
             logger.warn("Could not create user", me);
-            Response.Status status = causedByNamingException(me) ? Response.Status.INTERNAL_SERVER_ERROR : Response.Status.BAD_REQUEST;
+            Response.Status status = me instanceof ModelValidationException ? Response.Status.BAD_REQUEST : Response.Status.INTERNAL_SERVER_ERROR;
             throw ErrorResponse.error(status == Response.Status.INTERNAL_SERVER_ERROR
                     ? "For more on this error consult the server log." : "Could not create user", status);
         }
-    }
-
-    private static boolean causedByNamingException(Throwable throwable) {
-        for (Throwable cause = throwable.getCause(); cause != null; cause = cause.getCause()) {
-            if (cause instanceof NamingException) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private boolean canCreateGroupMembers(UserRepresentation rep) {

@@ -41,8 +41,7 @@ import org.keycloak.utils.MediaType;
 import org.keycloak.utils.MediaTypeMatcher;
 
 import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import org.jboss.logging.Logger;
 
 @Provider
@@ -82,16 +81,14 @@ public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
             OAuth2ErrorRepresentation error = new OAuth2ErrorRepresentation();
 
             error.setError(getErrorCode(throwable));
-            if (isStorageMappingFailure(throwable)) {
+            if (throwable instanceof JsonParseException || throwable instanceof MismatchedInputException) {
+                error.setErrorDescription("Cannot parse the JSON");
+            } else if (isServerError) {
                 error.setErrorDescription("For more on this error consult the server log.");
             } else if (throwable instanceof ModelValidationException || throwable.getCause() instanceof ModelException) {
                 error.setErrorDescription(throwable.getMessage());
             } else if (throwable instanceof ModelDuplicateException) {
                 error.setErrorDescription(throwable.getMessage());
-            } else if (throwable instanceof JsonProcessingException || throwable.getCause() instanceof JsonProcessingException) {
-                error.setErrorDescription("Cannot parse the JSON");
-            } else if (isServerError) {
-                error.setErrorDescription("For more on this error consult the server log.");
             }
 
             return Response.status(responseStatus)
@@ -125,11 +122,8 @@ public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
             return Response.Status.fromStatusCode(ex.getResponse().getStatus());
         }
 
-        if (isStorageMappingFailure(throwable)) {
-            return Response.Status.INTERNAL_SERVER_ERROR;
-        }
-
-        if (throwable instanceof JsonProcessingException || throwable instanceof ModelValidationException) {
+        if (throwable instanceof JsonParseException || throwable instanceof MismatchedInputException
+                || throwable instanceof ModelValidationException) {
             return Response.Status.BAD_REQUEST;
         }
 
@@ -142,15 +136,6 @@ public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
         }
 
         return Response.Status.INTERNAL_SERVER_ERROR;
-    }
-
-    private static boolean isStorageMappingFailure(Throwable throwable) {
-        if (!(throwable instanceof JsonMappingException)) {
-            return false;
-        }
-
-        Throwable cause = throwable.getCause();
-        return cause instanceof ModelException || cause instanceof IllegalStateException;
     }
 
     private static String getErrorCode(Throwable throwable) {

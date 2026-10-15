@@ -30,7 +30,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.naming.NamingException;
 
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.Consumes;
@@ -77,6 +76,7 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.ModelDuplicateException;
 import org.keycloak.models.ModelException;
 import org.keycloak.models.ModelIllegalStateException;
+import org.keycloak.models.ModelValidationException;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserConsentModel;
 import org.keycloak.models.UserCredentialModel;
@@ -274,7 +274,7 @@ public class UserResource {
         } catch (ModelException me) {
             logger.warn("Could not update user!", me);
             session.getTransactionManager().setRollbackOnly();
-            Status status = causedByNamingException(me) ? Status.INTERNAL_SERVER_ERROR : Status.BAD_REQUEST;
+            Status status = me instanceof ModelValidationException ? Status.BAD_REQUEST : Status.INTERNAL_SERVER_ERROR;
             throw ErrorResponse.error(status == Status.INTERNAL_SERVER_ERROR
                     ? "For more on this error consult the server log." : "Could not update user!", status);
         } catch (ForbiddenException | ErrorResponseException e) {
@@ -285,15 +285,6 @@ public class UserResource {
             logger.warn("Could not update user!", me);// may be committed by JTA which can't
             throw ErrorResponse.error("Could not update user!", Status.BAD_REQUEST);
         }
-    }
-
-    private static boolean causedByNamingException(Throwable throwable) {
-        for (Throwable cause = throwable.getCause(); cause != null; cause = cause.getCause()) {
-            if (cause instanceof NamingException) {
-                return true;
-            }
-        }
-        return false;
     }
 
     public static Response validateUserProfile(UserProfile profile, KeycloakSession session, AdminAuth adminAuth) {
