@@ -45,8 +45,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import org.jboss.logging.Logger;
 
-import static org.keycloak.common.util.Throwables.isCausedBy;
-
 @Provider
 public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
 
@@ -113,19 +111,24 @@ public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
     }
 
     static String getErrorDescription(Throwable throwable) {
-        if (throwable instanceof ModelValidationException || throwable instanceof ModelDuplicateException) {
-            return throwable.getMessage();
-        }
-
-        if (getResponseStatus(throwable).getFamily().equals(Response.Status.Family.SERVER_ERROR)) {
+        if (throwable instanceof JsonMappingException && throwable.getCause() instanceof ModelException) {
             return "For more on this error consult the server log.";
         }
 
-        if (throwable instanceof JsonProcessingException || throwable.getCause() instanceof JsonProcessingException) {
-            return "Cannot parse the JSON";
+        String errorDescription = null;
+        if (throwable instanceof ModelValidationException || throwable.getCause() instanceof ModelException) {
+            errorDescription = throwable.getMessage();
         }
 
-        return null;
+        if (throwable instanceof ModelDuplicateException) {
+            errorDescription = throwable.getMessage();
+        } else if (throwable instanceof JsonProcessingException || throwable.getCause() instanceof JsonProcessingException) {
+            errorDescription = "Cannot parse the JSON";
+        } else if (getResponseStatus(throwable).getFamily().equals(Response.Status.Family.SERVER_ERROR)) {
+            errorDescription = "For more on this error consult the server log.";
+        }
+
+        return errorDescription;
     }
 
     static Response.Status getResponseStatus(Throwable throwable) {
@@ -133,7 +136,7 @@ public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
             return Response.Status.fromStatusCode(ex.getResponse().getStatus());
         }
 
-        if (throwable instanceof JsonMappingException && isCausedBy(throwable, ModelException.class)) {
+        if (throwable instanceof JsonMappingException && throwable.getCause() instanceof ModelException) {
             return Response.Status.INTERNAL_SERVER_ERROR;
         }
 
