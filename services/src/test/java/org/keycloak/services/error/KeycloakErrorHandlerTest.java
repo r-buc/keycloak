@@ -6,11 +6,10 @@ import jakarta.ws.rs.core.Response;
 
 import org.keycloak.models.ModelException;
 
-import org.junit.jupiter.api.Test;
-
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
