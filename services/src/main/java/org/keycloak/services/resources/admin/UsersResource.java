@@ -52,6 +52,7 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.ModelDuplicateException;
 import org.keycloak.models.ModelException;
 import org.keycloak.models.ModelIllegalStateException;
+import org.keycloak.models.ModelValidationException;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.UserSessionModel;
@@ -192,10 +193,12 @@ public class UsersResource {
                     Response.Status.BAD_REQUEST);
         } catch (ModelIllegalStateException e) {
             logger.error(e.getMessage(), e);
-            throw ErrorResponse.error(e.getMessage(), Response.Status.INTERNAL_SERVER_ERROR);
+            throw ErrorResponse.error("For more on this error consult the server log.", Response.Status.INTERNAL_SERVER_ERROR);
         } catch (ModelException me){
             logger.warn("Could not create user", me);
-            throw ErrorResponse.error("Could not create user", Response.Status.BAD_REQUEST);
+            Response.Status status = me instanceof ModelValidationException ? Response.Status.BAD_REQUEST : Response.Status.INTERNAL_SERVER_ERROR;
+            throw ErrorResponse.error(status == Response.Status.INTERNAL_SERVER_ERROR
+                    ? "For more on this error consult the server log." : "Could not create user", status);
         }
     }
 
