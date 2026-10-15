@@ -82,7 +82,17 @@ public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
             OAuth2ErrorRepresentation error = new OAuth2ErrorRepresentation();
 
             error.setError(getErrorCode(throwable));
-            error.setErrorDescription(getErrorDescription(throwable));
+            if (throwable instanceof JsonMappingException && throwable.getCause() instanceof ModelException) {
+                error.setErrorDescription("For more on this error consult the server log.");
+            } else if (throwable instanceof ModelValidationException || throwable.getCause() instanceof ModelException) {
+                error.setErrorDescription(throwable.getMessage());
+            } else if (throwable instanceof ModelDuplicateException) {
+                error.setErrorDescription(throwable.getMessage());
+            } else if (throwable instanceof JsonProcessingException || throwable.getCause() instanceof JsonProcessingException) {
+                error.setErrorDescription("Cannot parse the JSON");
+            } else if (isServerError) {
+                error.setErrorDescription("For more on this error consult the server log.");
+            }
 
             return Response.status(responseStatus)
                     .type(MediaType.APPLICATION_JSON_TYPE)
@@ -108,27 +118,6 @@ public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
             logger.error("Failed to create error page", t);
             return Response.serverError().build();
         }
-    }
-
-    static String getErrorDescription(Throwable throwable) {
-        if (throwable instanceof JsonMappingException && throwable.getCause() instanceof ModelException) {
-            return "For more on this error consult the server log.";
-        }
-
-        String errorDescription = null;
-        if (throwable instanceof ModelValidationException || throwable.getCause() instanceof ModelException) {
-            errorDescription = throwable.getMessage();
-        }
-
-        if (throwable instanceof ModelDuplicateException) {
-            errorDescription = throwable.getMessage();
-        } else if (throwable instanceof JsonProcessingException || throwable.getCause() instanceof JsonProcessingException) {
-            errorDescription = "Cannot parse the JSON";
-        } else if (getResponseStatus(throwable).getFamily().equals(Response.Status.Family.SERVER_ERROR)) {
-            errorDescription = "For more on this error consult the server log.";
-        }
-
-        return errorDescription;
     }
 
     static Response.Status getResponseStatus(Throwable throwable) {
