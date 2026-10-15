@@ -42,7 +42,10 @@ import org.keycloak.utils.MediaTypeMatcher;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import org.jboss.logging.Logger;
+
+import static org.keycloak.common.util.Throwables.isCausedBy;
 
 @Provider
 public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
@@ -81,15 +84,7 @@ public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
             OAuth2ErrorRepresentation error = new OAuth2ErrorRepresentation();
 
             error.setError(getErrorCode(throwable));
-            if (throwable instanceof ModelValidationException || throwable.getCause() instanceof ModelException) {
-                error.setErrorDescription(throwable.getMessage());
-            } if (throwable instanceof ModelDuplicateException) {
-                error.setErrorDescription(throwable.getMessage());
-            } else if (throwable instanceof JsonProcessingException || throwable.getCause() instanceof JsonProcessingException) {
-                error.setErrorDescription("Cannot parse the JSON");
-            } else if (isServerError) {
-                error.setErrorDescription("For more on this error consult the server log.");
-            }
+            error.setErrorDescription(getErrorDescription(throwable));
 
             return Response.status(responseStatus)
                     .type(MediaType.APPLICATION_JSON_TYPE)
@@ -117,9 +112,29 @@ public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
         }
     }
 
-    private static Response.Status getResponseStatus(Throwable throwable) {
+    static String getErrorDescription(Throwable throwable) {
+        if (throwable instanceof ModelValidationException || throwable instanceof ModelDuplicateException) {
+            return throwable.getMessage();
+        }
+
+        if (getResponseStatus(throwable).getFamily().equals(Response.Status.Family.SERVER_ERROR)) {
+            return "For more on this error consult the server log.";
+        }
+
+        if (throwable instanceof JsonProcessingException || throwable.getCause() instanceof JsonProcessingException) {
+            return "Cannot parse the JSON";
+        }
+
+        return null;
+    }
+
+    static Response.Status getResponseStatus(Throwable throwable) {
         if (throwable instanceof WebApplicationException ex) {
             return Response.Status.fromStatusCode(ex.getResponse().getStatus());
+        }
+
+        if (throwable instanceof JsonMappingException && isCausedBy(throwable, ModelException.class)) {
+            return Response.Status.INTERNAL_SERVER_ERROR;
         }
 
         if (throwable instanceof JsonProcessingException || throwable instanceof ModelValidationException) {
