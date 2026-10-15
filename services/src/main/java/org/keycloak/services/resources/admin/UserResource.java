@@ -16,6 +16,8 @@
  */
 package org.keycloak.services.resources.admin;
 
+import javax.naming.NamingException;
+
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -273,7 +275,9 @@ public class UserResource {
         } catch (ModelException me) {
             logger.warn("Could not update user!", me);
             session.getTransactionManager().setRollbackOnly();
-            throw ErrorResponse.error("Could not update user!", Status.BAD_REQUEST);
+            Response.Status status = me.isCausedBy(NamingException.class) ? Status.INTERNAL_SERVER_ERROR : Status.BAD_REQUEST;
+            throw ErrorResponse.error(status == Status.INTERNAL_SERVER_ERROR
+                    ? "For more on this error consult the server log." : "Could not update user!", status);
         } catch (ForbiddenException | ErrorResponseException e) {
             session.getTransactionManager().setRollbackOnly();
             throw e;

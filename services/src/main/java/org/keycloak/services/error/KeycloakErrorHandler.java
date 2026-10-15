@@ -82,7 +82,7 @@ public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
             OAuth2ErrorRepresentation error = new OAuth2ErrorRepresentation();
 
             error.setError(getErrorCode(throwable));
-            if (throwable instanceof JsonMappingException && throwable.getCause() instanceof ModelException) {
+            if (isStorageMappingFailure(throwable)) {
                 error.setErrorDescription("For more on this error consult the server log.");
             } else if (throwable instanceof ModelValidationException || throwable.getCause() instanceof ModelException) {
                 error.setErrorDescription(throwable.getMessage());
@@ -125,7 +125,7 @@ public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
             return Response.Status.fromStatusCode(ex.getResponse().getStatus());
         }
 
-        if (throwable instanceof JsonMappingException && throwable.getCause() instanceof ModelException) {
+        if (isStorageMappingFailure(throwable)) {
             return Response.Status.INTERNAL_SERVER_ERROR;
         }
 
@@ -135,6 +135,15 @@ public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
 
         if (throwable instanceof ModelIllegalStateException) {
             return Response.Status.INTERNAL_SERVER_ERROR;
+        }
+
+        private static boolean isStorageMappingFailure(Throwable throwable) {
+            if (!(throwable instanceof JsonMappingException)) {
+                return false;
+            }
+
+            Throwable cause = throwable.getCause();
+            return cause instanceof ModelException || cause instanceof IllegalStateException;
         }
 
         if (throwable instanceof ModelDuplicateException) {

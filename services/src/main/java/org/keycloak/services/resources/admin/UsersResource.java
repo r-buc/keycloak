@@ -16,6 +16,8 @@
  */
 package org.keycloak.services.resources.admin;
 
+import javax.naming.NamingException;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -195,7 +197,9 @@ public class UsersResource {
             throw ErrorResponse.error(e.getMessage(), Response.Status.INTERNAL_SERVER_ERROR);
         } catch (ModelException me){
             logger.warn("Could not create user", me);
-            throw ErrorResponse.error("Could not create user", Response.Status.BAD_REQUEST);
+            Response.Status status = me.isCausedBy(NamingException.class) ? Response.Status.INTERNAL_SERVER_ERROR : Response.Status.BAD_REQUEST;
+            throw ErrorResponse.error(status == Response.Status.INTERNAL_SERVER_ERROR
+                    ? "For more on this error consult the server log." : "Could not create user", status);
         }
     }
 
