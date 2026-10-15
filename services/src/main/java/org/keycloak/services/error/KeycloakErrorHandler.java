@@ -120,7 +120,7 @@ public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
         }
     }
 
-    static Response.Status getResponseStatus(Throwable throwable) {
+    private static Response.Status getResponseStatus(Throwable throwable) {
         if (throwable instanceof WebApplicationException ex) {
             return Response.Status.fromStatusCode(ex.getResponse().getStatus());
         }
@@ -137,20 +137,20 @@ public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
             return Response.Status.INTERNAL_SERVER_ERROR;
         }
 
-        private static boolean isStorageMappingFailure(Throwable throwable) {
-            if (!(throwable instanceof JsonMappingException)) {
-                return false;
-            }
-
-            Throwable cause = throwable.getCause();
-            return cause instanceof ModelException || cause instanceof IllegalStateException;
-        }
-
         if (throwable instanceof ModelDuplicateException) {
             return Response.Status.CONFLICT;
         }
 
         return Response.Status.INTERNAL_SERVER_ERROR;
+    }
+
+    private static boolean isStorageMappingFailure(Throwable throwable) {
+        if (!(throwable instanceof JsonMappingException)) {
+            return false;
+        }
+
+        Throwable cause = throwable.getCause();
+        return cause instanceof ModelException || cause instanceof IllegalStateException;
     }
 
     private static String getErrorCode(Throwable throwable) {

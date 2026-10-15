@@ -16,8 +16,6 @@
  */
 package org.keycloak.services.resources.admin;
 
-import javax.naming.NamingException;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -28,6 +26,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.naming.NamingException;
 
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.Consumes;
@@ -197,10 +196,19 @@ public class UsersResource {
             throw ErrorResponse.error(e.getMessage(), Response.Status.INTERNAL_SERVER_ERROR);
         } catch (ModelException me){
             logger.warn("Could not create user", me);
-            Response.Status status = me.isCausedBy(NamingException.class) ? Response.Status.INTERNAL_SERVER_ERROR : Response.Status.BAD_REQUEST;
+            Response.Status status = causedByNamingException(me) ? Response.Status.INTERNAL_SERVER_ERROR : Response.Status.BAD_REQUEST;
             throw ErrorResponse.error(status == Response.Status.INTERNAL_SERVER_ERROR
                     ? "For more on this error consult the server log." : "Could not create user", status);
         }
+    }
+
+    private static boolean causedByNamingException(Throwable throwable) {
+        for (Throwable cause = throwable.getCause(); cause != null; cause = cause.getCause()) {
+            if (cause instanceof NamingException) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean canCreateGroupMembers(UserRepresentation rep) {

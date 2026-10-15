@@ -1,14 +1,16 @@
 package org.keycloak.services.error;
 
-import javax.naming.directory.InvalidSearchFilterException;
-
 import java.lang.reflect.Proxy;
 import java.util.List;
+import java.util.Optional;
+import javax.naming.directory.InvalidSearchFilterException;
 
-import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 
+import org.keycloak.http.HttpRequest;
+import org.keycloak.http.HttpResponse;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.ModelException;
 import org.keycloak.representations.idm.OAuth2ErrorRepresentation;
@@ -75,6 +77,16 @@ class KeycloakErrorHandlerTest {
                     @Override
                     protected DefaultKeycloakContext createKeycloakContext(KeycloakSession session) {
                         return new DefaultKeycloakContext(session) {
+                            @Override
+                            protected Optional<HttpRequest> createHttpRequest() {
+                                return Optional.empty();
+                            }
+
+                            @Override
+                            protected Optional<HttpResponse> createHttpResponse() {
+                                return Optional.empty();
+                            }
+
                             @Override
                             public HttpHeaders getRequestHeaders() {
                                 return (HttpHeaders) Proxy.newProxyInstance(HttpHeaders.class.getClassLoader(),
